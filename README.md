@@ -20,7 +20,7 @@ pip install -r requirements.txt
 
 or for Windows:
 ```bash
-.venv\Scripts\activate
+venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
