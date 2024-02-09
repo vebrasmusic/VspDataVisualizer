@@ -56,6 +56,7 @@ class Analysis():
     # data will ave a couple analyses
 
     def __init__(self, data):
+        print("Analysis init")
         self.data = data
 
     def run_analysis(self):
@@ -132,5 +133,17 @@ class LinearityAnalysis(Analysis):
         ax.legend()
         plt.show()
 
+class AnalysisCore():
+    
+    ''' handles the core functionality tying together the analyses and data handling'''
+    def __init__(self, directory):
+        self.data = Data(directory)
+        self.sp = SubplotAnalysis(self.data)
+        self.la = LinearityAnalysis(self.data)
+        
 
+    def run(self):
+        ''' runs the app '''
+        self.sp.run_analysis()
+        self.la.run_analysis()
 

@@ -12,12 +12,14 @@ from PyQt6.QtWidgets import (
     QLabel
 )
 
+from src.Analysis import AnalysisCore
+
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
     ''' main window for the app '''
     def __init__(self):
         super().__init__()
-
+        self.show()
         self.setWindowTitle("VSP Analyzer (Lactate)")
 
         button1 = QPushButton("Select Data Folder")
@@ -37,21 +39,29 @@ class MainWindow(QMainWindow):
         # Set the central widget of the Window.
         self.setCentralWidget(button1)
 
+    def StartAnalysis(self, directory):
+        ''' starts the analysis '''
+        #print(directory)
+        self.hide()
+        analysisCore = AnalysisCore(directory)
+        analysisCore.run()
+        
+
     def select_folder(self):
         ''' opens a dialog to select the data folder '''
-
         dlg = QFileDialog(self)
         dlg.setFileMode(QFileDialog.FileMode.Directory)
         if dlg.exec():
             filenames = dlg.selectedFiles()
-            print(filenames) #this is a list of the selected files, in this case just a folder
+            # Call StartAnalysis with the first selected directory
+            self.StartAnalysis(filenames[0])  # Assuming you only need the first selected directory
 
 class MainMenu():
     ''' main menu for the app '''
     def __init__(self):
         self.app = QApplication([]) #creates the application, need one of these per app
         self.window = MainWindow()
-        self.window.show() #they do not show by default
+        
 
     def run(self):
         self.app.exec() #runs the application's event loop

@@ -11,8 +11,3 @@ class Core():
         self.menu.run()
 
 
-# data = Data("data_020824")
-# sp = SubplotAnalysis(data)
-# sp.run_analysis()
-# la = LinearityAnalysis(data)
-# la.run_analysis()
