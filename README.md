@@ -5,7 +5,7 @@
 ## How to run
 
 
-after cloning, cd into the folder and run the following cmd:
+after cloning, cd into the folder and run the following cmd: **NOTE THIS ONLY WORKS FOR MAC,for windows look up venv**
 
 ``` bash
 python -m venv venv
