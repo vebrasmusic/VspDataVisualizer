@@ -9,5 +9,3 @@ class Core():
     def run(self):
         ''' runs the app '''
         self.menu.run()
-
-

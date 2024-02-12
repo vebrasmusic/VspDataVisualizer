@@ -1,13 +1,89 @@
 ''' handles the analysis of the data '''
-
 import os
+from abc import ABC, abstractmethod
 import numpy
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
 
+
+'''
+Hows this work?
+
+
+Top level, you have an Analysis, which will run a specific type of analysis / plot data.
+An Analysis has a Data object
+A Data object has a list of Run objects
+A Run can contain different kinds of TextLoader or ConcentrationParser.
+'''
+
+
+
+class ConcentrationParser():
+    ''' base class for parsing the concentration from the filename '''
+
+    def extract_concentration_from_filename(self, file_name):
+        ''' extract the concentration from the filename '''
+        conc_split = file_name.split("_")
+        conc = conc_split[0] + "." + conc_split[1]
+        return conc
+
+class TextLoader(ABC):
+    ''' base class for loading data from a text file '''
+    @abstractmethod
+    def load_data(self):
+        ''' load a single text file into a numpy array ''' 
+
 class Run():
+    ''' base class that handles the data for a single run '''
+
+    def __init__(self, file_path, text_loader: TextLoader):
+        self.concentration_parser = ConcentrationParser()
+        self.text_loader = text_loader
+        self.file_path = file_path
+        self.concentration = None
+        self.time = None
+        self.current = None
+
+    def load_data(self):
+        ''' load a single text file into a numpy array '''
+        self.text_loader.load_data()
+
+    def adjust_time(self, time_array):
+        ''' adjust the time array to start at t = 0 seconds '''
+        first_time = time_array[0]
+        self.time = time_array - first_time
+
+class Data():
+    ''' handles multiple Run objects, but as a container '''
+    #this should only handle mu8ltiple runs, should not know about analyses
+    def __init__(self, directory, run_factory: RunFactory):
+        self.directory = directory
+        self.run_class = run_class
+        self.nested_data = []
+        self.load_data()
+        self.sort_data()
+
+    def load_data(self):
+        ''' loads data thru all Run objects '''
+        for file in os.scandir(self.directory):
+            if file.is_file():
+                run_obj = run_class(file.path)
+                self.nested_data.append(run_obj)
+
+    def sort_data(self):
+        self.nested_data = sorted(self.nested_data, key=lambda run: float(run.concentration))
+
+class Analysis(ABC):
+    # can have a figure, and some rules etc.abs
+    # data will ave a couple analyses
+    @abstractmethod
+    def run_analysis(self):
+        pass
+
+class VSPRun(AbstractRun):
     ''' Contains the data for a single run, including conversion from mA to nA '''
     def __init__(self, file_path):
+        super().__init__(file_path)
         self.file_path = file_path
         self.time = None
         self.current = None
@@ -20,47 +96,6 @@ class Run():
         current, time = numpy.loadtxt(self.file_path, skiprows=1, unpack=True)
         self.adjust_time(time)
         self.current = current * 1E6
-
-    def adjust_time(self, time_array):
-        first_time = time_array[0]
-        self.time = time_array - first_time
-
-
-    def parse_conc(self):
-        path = self.file_path.name
-        conc_split = path.split("_")
-        conc = conc_split[0] + "." + conc_split[1]
-        self.concentration = conc
-
-class Data():
-    ''' handles multiple Run objects, but as a container '''
-    #this should only handle mu8ltiple runs, should not know about analyses
-    def __init__(self, directory):
-        self.directory = directory
-        self.nested_data = []
-        self.load_data()
-        self.sort_data()
-        
-    def load_data(self):
-        for file in os.scandir(self.directory):
-            if file.is_file():
-                run_obj = Run(file)
-                self.nested_data.append(run_obj)
-
-    def sort_data(self):
-        self.nested_data = sorted(self.nested_data, key=lambda run: float(run.concentration))
-
-
-class Analysis():
-    # can have a figure, and some rules etc.abs
-    # data will ave a couple analyses
-
-    def __init__(self, data):
-        print("Analysis init")
-        self.data = data
-
-    def run_analysis(self):
-        pass
 
 class SubplotAnalysis(Analysis):
     def __init__(self, data):

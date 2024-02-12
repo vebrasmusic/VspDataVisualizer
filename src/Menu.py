@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QLabel
 )
 
-from src.Analysis import AnalysisCore
+from src.VSPAnalysis import AnalysisCore
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
