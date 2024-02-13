@@ -422,6 +422,10 @@ confidence=HIGH,
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
 disable=raw-checker-failed,
+      pointless-string-statement,
+      missing-final-newline,
+      too-few-public-methods,
+      trailing-whitespace,
       no-name-in-module,
       line-too-long,
         bad-inline-option,

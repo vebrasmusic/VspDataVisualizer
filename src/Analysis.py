@@ -1,6 +1,10 @@
 ''' handles the analysis of the data '''
+from ctypes import Array
 import os
 from abc import ABC, abstractmethod
+from typing import Tuple
+from matplotlib.transforms import ScaledTranslation
+from networkx import bidirectional_dijkstra
 import numpy
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
@@ -22,23 +26,134 @@ class ConcentrationParser():
     ''' base class for parsing the concentration from the filename '''
 
     def extract_concentration_from_filename(self, file_name):
-        ''' extract the concentration from the filename '''
+        ''' extract the concentration from the filename. this assumes that you
+        put int he concentration in the filename. Example would be "4.15 mg/dL",
+        which would be represented as "4_15_{any other metadata}.txt".
+        '''
         conc_split = file_name.split("_")
         conc = conc_split[0] + "." + conc_split[1]
         return conc
+    
+
+
+class DataModifier(ABC):
+
+    @abstractmethod
+    def modify_data(self):
+        ''' change the data here. can call things like "scale", etc.'''
+
+    def scale_current(self, current_array):
+        ''' scales the current from mA to nA'''
+        return current_array * 1E6
+
+
 
 class TextLoader(ABC):
     ''' base class for loading data from a text file '''
     @abstractmethod
-    def load_data(self):
+    def load_data(self, file_path):
         ''' load a single text file into a numpy array ''' 
+
+
+
+class LactateVSPCalibrationTextLoader(TextLoader):
+    ''' concrete implementation of TextLoader for the VSP format,
+    which will take / plot graphs of current vs. concentration
+    '''
+
+    def load_data(self, file_path: str):
+        ''' load a single text file into a numpy array '''
+        current_array, time_array = numpy.loadtxt(file_path, skiprows=1, unpack=True) #this line may change, given that we should be able to select from the menu
+        return current_array, time_array
+    
+
+
+class LactateVSPCalibrationDataModifier(DataModifier):
+
+    def modify_data(self, time_array, current_array):
+        new_time_array = self.__adjust_time(time_array)
+        new_current_array = self.__scale_current(current_array)
+        return new_time_array, new_current_array
+
+    def __scale_current(self, current_array):
+        return super().scale_current(current_array)
+    
+    def __adjust_time(self, time_array):
+        '''adjusts time array so that the first time is set as 0'''
+        first_time = time_array[0]
+        return time_array - first_time
+    
+
+
+class LactateStoneCalibrationTextLoader(TextLoader):
+    ''' concrete implementation of TextLoader for the calibration stone setup,
+    which will take / plot graphs of count vs. concentration
+    '''
+
+    def load_data(self, file_path: str):
+        ''' load a single text file into a numpy array '''
+        array_list = [
+            # AT SOME POINT GET TO THIS
+        ]
+
+        #from this unpack, we only want the following: time, count2, count3, stage2 (although thats if we dont use peak detection, whcih we may want to)
+        #remember that time now is in ms, need to convert / adjust
+        time_array, count1_array, stage1_array, count2_array, stage2_array, count3_array,stage3_array, current1_array, current2_array, current3_array   = numpy.loadtxt(file_path, skiprows=4, unpack=True) #this line may change, given that we should be able to select from the menu
+        
+        return time_array, count2_array, stage2_array, count3_array
+
+
+
+class LactateStoneCalibrationDataModifier(DataModifier):
+
+    def modify_data(self, time_array, count2_array, stage2_array, count3_array):
+        count_array = self.__select_highest_channel(count2_array, count3_array)
+        adjusted_time_array, adjusted_count_array = self.__adjust_analysis_window(time_array, count_array, stage2_array)
+        readjusted_time_array = self.__adjust_time(adjusted_time_array)
+        scaled_time_array = self.__scale_time(readjusted_time_array)
+
+        return scaled_time_array, adjusted_count_array
+
+    def __scale_time(self, time_array):
+        ''' scales time from ms to s '''
+        return time_array / 1000
+    
+    def __select_highest_channel(self, count2_array, count3_array):
+        ''' this finds the max of each, so that u can see which graph is higher. thats the one we choose to continue'''
+        max2 = count2_array.maximum()
+        max3 = count3_array.maximum()
+        if max2 > max3:
+            return count2_array
+        return count3_array
+
+        
+    def __adjust_analysis_window(self, time_array, count_array, stage2_array):
+        ''' adjust the window by finding where the actual curve starts (stage 3) '''
+        measurement_stage_index = 0
+        for i in len(stage2_array):
+            if stage2_array[i] == 3:
+                measurement_stage_index = i
+                break
+            print("no stage 3 found, error")
+        adjusted_time_array = time_array[measurement_stage_index:]
+        adjusted_count_array = count_array[measurement_stage_index:]
+        return adjusted_time_array, adjusted_count_array
+
+        
+
+    def __adjust_time(self, time_array):
+        '''adjusts time array so that the first time is set as 0'''
+        first_time = time_array[0]
+        return time_array - first_time
+
 
 class Run():
     ''' base class that handles the data for a single run '''
 
-    def __init__(self, file_path, text_loader: TextLoader):
+    def __init__(self, file_path, text_loader: TextLoader, data_modifier: DataModifier):
         self.concentration_parser = ConcentrationParser()
         self.text_loader = text_loader
+        self.data_modifier = data_modifier
         self.file_path = file_path
         self.concentration = None
         self.time = None
@@ -46,12 +161,8 @@ class Run():
 
     def load_data(self):
         ''' load a single text file into a numpy array '''
-        self.text_loader.load_data()
+        self.text_loader.load_data(self.file_path)
 
-    def adjust_time(self, time_array):
-        ''' adjust the time array to start at t = 0 seconds '''
-        first_time = time_array[0]
-        self.time = time_array - first_time
 
 class Data():
     ''' handles multiple Run objects, but as a container '''
