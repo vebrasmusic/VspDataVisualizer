@@ -1,10 +1,6 @@
 ''' handles the analysis of the data '''
-from ctypes import Array
 import os
 from abc import ABC, abstractmethod
-from typing import Tuple
-from matplotlib.transforms import ScaledTranslation
-from networkx import bidirectional_dijkstra
 import numpy
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
@@ -25,7 +21,7 @@ A Run can contain different kinds of TextLoader or ConcentrationParser.
 class ConcentrationParser():
     ''' base class for parsing the concentration from the filename '''
 
-    def extract_concentration_from_filename(self, file_name):
+    def extract_concentration_from_filename(self, file_name: str) -> str:
         ''' extract the concentration from the filename. this assumes that you
         put int he concentration in the filename. Example would be "4.15 mg/dL",
         which would be represented as "4_15_{any other metadata}.txt".
@@ -37,6 +33,10 @@ class ConcentrationParser():
 
 
 class DataModifier(ABC):
+    '''
+    abstract class for modifying the data,
+    such as scaling the current, adjusting the time, etc.
+    '''
 
     @abstractmethod
     def modify_data(self):
@@ -69,6 +69,7 @@ class LactateVSPCalibrationTextLoader(TextLoader):
 
 
 class LactateVSPCalibrationDataModifier(DataModifier):
+    ''' concrete implementation of DataModifier for the VSP format '''
 
     def modify_data(self, time_array, current_array):
         new_time_array = self.__adjust_time(time_array)
@@ -106,15 +107,14 @@ class LactateStoneCalibrationTextLoader(TextLoader):
 
 class LactateStoneCalibrationDataModifier(DataModifier):
 
-    def modify_data(self, time_array, count2_array, stage2_array, count3_array):
+    def modify_data(self, time_array: numpy.ndarray, count2_array: numpy.ndarray, stage2_array: numpy.ndarray, count3_array: numpy.ndarray):
         count_array = self.__select_highest_channel(count2_array, count3_array)
         adjusted_time_array, adjusted_count_array = self.__adjust_analysis_window(time_array, count_array, stage2_array)
         readjusted_time_array = self.__adjust_time(adjusted_time_array)
         scaled_time_array = self.__scale_time(readjusted_time_array)
-
         return scaled_time_array, adjusted_count_array
 
-    def __scale_time(self, time_array):
+    def __scale_time(self, time_array: numpy.ndarray) -> numpy.ndarray:
         ''' scales time from ms to s '''
         return time_array / 1000
     
@@ -125,7 +125,6 @@ class LactateStoneCalibrationDataModifier(DataModifier):
         if max2 > max3:
             return count2_array
         return count3_array
-
         
     def __adjust_analysis_window(self, time_array, count_array, stage2_array):
         ''' adjust the window by finding where the actual curve starts (stage 3) '''
@@ -138,8 +137,6 @@ class LactateStoneCalibrationDataModifier(DataModifier):
         adjusted_time_array = time_array[measurement_stage_index:]
         adjusted_count_array = count_array[measurement_stage_index:]
         return adjusted_time_array, adjusted_count_array
-
-        
 
     def __adjust_time(self, time_array):
         '''adjusts time array so that the first time is set as 0'''
@@ -292,4 +289,3 @@ class AnalysisCore():
         ''' runs the app '''
         self.sp.run_analysis()
         self.la.run_analysis()
-
