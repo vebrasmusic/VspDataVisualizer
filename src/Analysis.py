@@ -5,7 +5,6 @@ import numpy
 import matplotlib.pyplot as plt
 from scipy.stats import linregress
 
-
 '''
 Hows this work?
 
@@ -126,10 +125,10 @@ class LactateStoneCalibrationDataModifier(DataModifier):
             return count2_array
         return count3_array
         
-    def __adjust_analysis_window(self, time_array, count_array, stage2_array):
+    def __adjust_analysis_window(self, time_array: numpy.ndarray, count_array: numpy.ndarray, stage2_array: numpy.ndarray):
         ''' adjust the window by finding where the actual curve starts (stage 3) '''
         measurement_stage_index = 0
-        for i in len(stage2_array):
+        for i in range(len(stage2_array)):
             if stage2_array[i] == 3:
                 measurement_stage_index = i
                 break
@@ -138,7 +137,7 @@ class LactateStoneCalibrationDataModifier(DataModifier):
         adjusted_count_array = count_array[measurement_stage_index:]
         return adjusted_time_array, adjusted_count_array
 
-    def __adjust_time(self, time_array):
+    def __adjust_time(self, time_array: numpy.ndarray) -> numpy.ndarray:
         '''adjusts time array so that the first time is set as 0'''
         first_time = time_array[0]
         return time_array - first_time
