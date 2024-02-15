@@ -39,12 +39,12 @@ class MainWindow(QMainWindow):
         # Set the central widget of the Window.
         self.setCentralWidget(button1)
 
-    def StartAnalysis(self, directory):
+    def start_analysis(self, directory):
         ''' starts the analysis '''
         #print(directory)
         self.hide()
-        analysisCore = AnalysisCore(directory)
-        analysisCore.run()
+        analysis_core = AnalysisCore(directory)
+        analysis_core.run()
         
 
     def select_folder(self):
@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
         if dlg.exec():
             filenames = dlg.selectedFiles()
             # Call StartAnalysis with the first selected directory
-            self.StartAnalysis(filenames[0])  # Assuming you only need the first selected directory
+            self.start_analysis(filenames[0])  # Assuming you only need the first selected directory
 
 class MainMenu():
     ''' main menu for the app '''
