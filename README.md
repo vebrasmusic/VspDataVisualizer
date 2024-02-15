@@ -1,6 +1,8 @@
 # VSP Visualizer
 
-* specifically for TRAQ internal use in generating useful curves from the VSP-3000 in terms of enzymatic reactions.
+* specifically for TRAQ internal use in generating useful curves from the VSP-3000 and other calibrations, but in general can be a good fresher on GUI stuff for python + analysis.
+
+* uses PyQT, Numpy, Matplotlib 
 
 ## How to run
 
