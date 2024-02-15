@@ -1,5 +1,5 @@
 ''' runs the app '''
-from src.Core import Core
+from src.core import Core
 
 def main():
     ''' runs the app '''
