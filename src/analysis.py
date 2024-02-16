@@ -55,15 +55,24 @@ class TextLoader(ABC):
 
 
 class LactateVSPCalibrationTextLoader(TextLoader):
-    ''' concrete implementation of TextLoader for the VSP format,
-    which will take / plot graphs of current vs. concentration
-    '''
+    ''' loads the text file data into numpy arrays '''
+    def __init__(self, axis_order_in_file: tuple[str, str]):
+        self.axis_order_in_file = axis_order_in_file #dependency injection of the axes order from the UI
 
-    def load_data(self, file_path: str):
-        ''' load a single text file into a numpy array '''
-        current_array, time_array = numpy.loadtxt(file_path, skiprows=1, unpack=True) #this line may change, given that we should be able to select from the menu
+    def load_data(self, file_path: str) -> tuple[numpy.ndarray, numpy.ndarray]:
+        ''' load a single text file into a numpy array based on the axis order specified '''
+        # Load the data from the file
+        loaded_data = numpy.loadtxt(file_path, skiprows=1, unpack=True)
+        
+        # Dynamically unpack the loaded data based on the axis_order_in_file
+        if self.axis_order_in_file == ('time', 'current'):
+            time_array, current_array = loaded_data
+        elif self.axis_order_in_file == ('current', 'time'):
+            current_array, time_array = loaded_data
+        else:
+            raise ValueError("Invalid axis order. Must be either ('time', 'current') or ('current', 'time').")
+        
         return time_array, current_array
-    
 
 
 class LactateVSPCalibrationDataModifier(DataModifier):
@@ -92,13 +101,10 @@ class LactateStoneCalibrationTextLoader(TextLoader):
 
     def load_data(self, file_path: str):
         ''' load a single text file into a numpy array '''
-        array_list = [
-            # AT SOME POINT GET TO THIS
-        ]
 
         #from this unpack, we only want the following: time, count2, count3, stage2 (although thats if we dont use peak detection, whcih we may want to)
         #remember that time now is in ms, need to convert / adjust
-        time_array, count1_array, stage1_array, count2_array, stage2_array, count3_array,stage3_array, current1_array, current2_array, current3_array   = numpy.loadtxt(file_path, skiprows=4, unpack=True) #this line may change, given that we should be able to select from the menu
+        time_array, _, _, count2_array, stage2_array, count3_array, _, _, _, _   = numpy.loadtxt(file_path, skiprows=4, unpack=True) #this line may change, given that we should be able to select from the menu
         
         return time_array, count2_array, stage2_array, count3_array
 
@@ -176,10 +182,10 @@ class RunFactory():
         run = Run(file_path, text_loader, data_modifier)
         return run
 
-    def return_run(self, analysis_type: str, file_path: str):
+    def return_run(self, analysis_type: str, file_path: str, axis_order_in_file: tuple[str, str] = ('current', 'time')):
         ''' creates all experiment classes for a given analysis type '''
         if analysis_type == "LactateVSPCalibration":
-            text_loader = LactateVSPCalibrationTextLoader()
+            text_loader = LactateVSPCalibrationTextLoader(axis_order_in_file)
             data_modifier = LactateVSPCalibrationDataModifier()
             return self.create_run(file_path, text_loader, data_modifier)
         if analysis_type == "LactateStoneCalibration":
@@ -192,19 +198,19 @@ class RunFactory():
 class Data():
     ''' handles multiple Run objects, but as a container '''
     #this should only handle mu8ltiple runs, should not know about analyses
-    def __init__(self, directory: str, analysis_type: str):
+    def __init__(self, directory: str, analysis_type: str, axis_order_in_file: tuple[str, str] = ('current', 'time')):
         self.directory = directory
         self.analysis_type = analysis_type
         self.nested_data = []
         self.run_factory = RunFactory()
-        self.load_data()
+        self.load_data(axis_order_in_file)
         self.sort_data()
 
-    def load_data(self):
+    def load_data(self, axis_order_in_file):
         ''' loads data thru all Run objects '''
         for file in os.scandir(self.directory):
             if file.is_file() and not file.name.startswith('.'): # you can access the str name of the file path using file.path. also ignores hidden files like . ds store
-                run_obj = self.run_factory.return_run(self.analysis_type, file.path)
+                run_obj = self.run_factory.return_run(self.analysis_type, file.path, axis_order_in_file)
                 self.nested_data.append(run_obj)
 
     def sort_data(self):
@@ -239,7 +245,9 @@ class SubplotAnalysis(Analysis):
             conc = run.concentration
             ax.plot(x, y, label = conc + " mg/dL")
         ax.legend()
-        plt.show()
+        ax.legend(loc = "lower right")
+        ax.legend(fontsize = "xx-small")
+        return fig, ax
 
 class LinearityAnalysis(Analysis):
     ''' plots linearity between current / count and conc. '''
@@ -292,27 +300,32 @@ class LinearityAnalysis(Analysis):
         # Plot the linear regression line
         ax.plot(x, line, 'r', label=f'y={slope:.2f}x+{intercept:.2f}')
 
-        if slope != 0:  # To avoid division by zero
-            ax.plot(x, line, 'g--', label=f'x={(1/slope):.2f}y{-intercept/slope:.2f}')
-        else:
-            print("Slope is zero, cannot solve for x.")
+        # if slope != 0:  # To avoid division by zero
+        #     ax.plot(x, line, 'g--', label=f'x={(1/slope):.2f}y{-intercept/slope:.2f}')
+        # else:
+        #     print("Slope is zero, cannot solve for x.")
+
+        new_slope = 1 / slope
+        new_int = -intercept / slope
+        
 
         # Calculate and display R^2 value
         r_squared = r_value**2
-        ax.text(0.05, 0.95, f'R^2 = {r_squared:.2f}', transform=ax.transAxes)
+        ax.text(0.05, 0.75, f'R^2 = {r_squared:.2f}', transform=ax.transAxes)
 
         ax.legend()
-        plt.show()
+        return fig, ax, new_slope, new_int, r_squared
 
 class AnalysisCore():
     
     ''' handles the core functionality tying together the analyses and data handling'''
-    def __init__(self, directory):
-        self.data = Data(directory, "LactateStoneCalibration")
+    def __init__(self, directory: str, analysis_type: str, axis_order_in_file: tuple[str, str] = ('current', 'time')): #this all needs to grab right from UI choices
+        self.data = Data(directory, analysis_type, axis_order_in_file)
         self.sp = SubplotAnalysis(self.data)
         self.la = LinearityAnalysis(self.data)
 
     def run(self):
         ''' runs the app '''
-        self.sp.run_analysis()
-        self.la.run_analysis()
+        fig1, ax1 = self.sp.run_analysis()
+        fig2, ax2, slope, new_int, r_squared = self.la.run_analysis()
+        return fig1, ax1, fig2, ax2, slope, new_int, r_squared
