@@ -103,7 +103,8 @@ class LCD(QLCDNumber):
     def __init__(self):
         super().__init__()
         self.setSegmentStyle(QLCDNumber.SegmentStyle.Filled)
-        self.setDigitCount(8)
+        self.setDigitCount(5)
+
     
 
 # Subclass QMainWindow to customize your application's main window
@@ -152,25 +153,27 @@ class MainWindow(QMainWindow):
         # Add the upload button to the main layout
         
 
+        # top left div
         self.top_left_layout = QVBoxLayout()
         self.top_left_layout.addWidget(self.start_analysis_button)
         self.top_left_layout.addLayout(self.upload_button_layout)
         self.top_left_layout.addLayout(self.analysis_type_layout)
         self.top_left_layout.addLayout(self.axis_layout)
 
+        #top right div
         self.top_right_layout = QVBoxLayout()
         self.top_right_layout.addWidget(self.slope_lcd)
         self.top_right_layout.addWidget(self.int_lcd)
         self.top_right_layout.addWidget(self.r_squared_lcd)
 
+        # top div (contains left and right)
         self.top_layout = QHBoxLayout()
         self.top_layout.addLayout(self.top_left_layout)
         self.top_layout.addLayout(self.top_right_layout)
 
 
         self.main_layout.addLayout(self.top_layout)
-        #graph layout goes underneath
-        # Add the QVBoxLayout (which contains the label and dropdown) to the main layout
+        #graph layout is under this as well
 
         widget.setLayout(self.main_layout)
         # Set the central widget of the Window to the widget containing the layout
@@ -187,14 +190,14 @@ class MainWindow(QMainWindow):
         axis_order_in_file = self.axis_select_dropdown.axis_order
 
         analysis_core = AnalysisCore(directory, analysis_type, axis_order_in_file)
-        fig1, ax1, fig2, ax2, slope, int, r_squared = analysis_core.run()
+        fig1, ax1, fig2, ax2, slope, y_intercept, r_squared = analysis_core.run()
         self.update_graphs(fig1, fig2)
-        self.update_metrics(slope, int, r_squared)
+        self.update_lcd_metrics(slope, y_intercept, r_squared)
 
-    def update_metrics(self, slope, int, r_squared):
+    def update_lcd_metrics(self, slope, y_intercept, r_squared):
         ''' updates the metrics '''
         self.slope_lcd.display(slope)
-        self.int_lcd.display(int)
+        self.int_lcd.display(y_intercept)
         self.r_squared_lcd.display(r_squared)
 
     def update_layout_file_selection(self):
