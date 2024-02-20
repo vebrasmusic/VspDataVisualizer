@@ -1,6 +1,8 @@
-# VSP Visualizer
+# TRAQ Sensors QA
 
 * specifically for TRAQ internal use in generating useful curves from the VSP-3000 and other calibrations, but in general can be a good fresher on GUI stuff for python + analysis.
+
+*** EDIT NOW GOOD FOR QA ***
 
 * uses PyQT, Numpy, Matplotlib 
 
