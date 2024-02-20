@@ -1,19 +1,9 @@
-''' handles the analysis of the data '''
+''' defines Run objects and their internal components '''
+
 import os
 from abc import ABC, abstractmethod
 import numpy
-import matplotlib.pyplot as plt
-from scipy.stats import linregress
 
-'''
-Hows this work?
-
-
-Top level, you have an Analysis, which will run a specific type of analysis / plot data.
-An Analysis has a Data object
-A Data object has a list of Run objects
-A Run can contain different kinds of TextLoader or ConcentrationParser.
-'''
 
 class ConcentrationParser():
     ''' base class for parsing the concentration from the filename '''
@@ -27,8 +17,6 @@ class ConcentrationParser():
         conc_split = file_name.split("_")
         conc = conc_split[0] + "." + conc_split[1]
         return conc
-    
-
 
 class DataModifier(ABC):
     '''
@@ -44,15 +32,11 @@ class DataModifier(ABC):
         ''' scales the current from mA to nA'''
         return current_array * 1E6
 
-
-
 class TextLoader(ABC):
     ''' base class for loading data from a text file '''
     @abstractmethod
-    def load_data(self, file_path: str):
+    def load_data(self, file_path: str) -> tuple[numpy.ndarray, numpy.ndarray]:
         ''' load a single text file into a numpy array ''' 
-
-
 
 class LactateVSPCalibrationTextLoader(TextLoader):
     ''' loads the text file data into numpy arrays '''
@@ -193,139 +177,3 @@ class RunFactory():
             data_modifier = LactateStoneCalibrationDataModifier()
             return self.create_run(file_path, text_loader, data_modifier)
         raise ValueError(f"Unknown run type: {analysis_type}")
-
-
-class Data():
-    ''' handles multiple Run objects, but as a container '''
-    #this should only handle mu8ltiple runs, should not know about analyses
-    def __init__(self, directory: str, analysis_type: str, axis_order_in_file: tuple[str, str] = ('current', 'time')):
-        self.directory = directory
-        self.analysis_type = analysis_type
-        self.nested_data = []
-        self.run_factory = RunFactory()
-        self.load_data(axis_order_in_file)
-        self.sort_data()
-
-    def load_data(self, axis_order_in_file):
-        ''' loads data thru all Run objects '''
-        for file in os.scandir(self.directory):
-            if file.is_file() and not file.name.startswith('.'): # you can access the str name of the file path using file.path. also ignores hidden files like . ds store
-                run_obj = self.run_factory.return_run(self.analysis_type, file.path, axis_order_in_file)
-                self.nested_data.append(run_obj)
-
-    def sort_data(self):
-        ''' sorts run objects by their concentration / count, lowest to highest '''
-        self.nested_data = sorted(self.nested_data, key=lambda run: float(run.concentration))
-
-class Analysis(ABC):
-    ''' can have a figure, and some rules etc.abs '''
-    # data will ave a couple analyses
-    @abstractmethod
-    def run_analysis(self):
-        ''' runs the analysis including graphing '''
-
-class SubplotAnalysis(Analysis):
-    ''' specific analysis with subplots, ie multiple curves for current / counts vs time '''
-    def __init__(self, data: Data):
-        self.data = data
-    def run_analysis(self):
-        fig, ax = plt.subplots()
-        ax.set_xlabel("Time (s)")
-        ax.axvline(x = 10, linestyle = "dashed", color = "black")
-        if self.data.analysis_type == "LactateVSPCalibration":
-            ax.set_ylabel("Current (nA)")
-            ax.set_ylim(bottom = 0, top = 2000)
-        elif self.data.analysis_type == "LactateStoneCalibration":
-            ax.set_ylabel("Counts")
-            # ax.set_ylim(bottom = 0, top = 2000)
-        
-        for run in self.data.nested_data:
-            x = run.x_axis
-            y = run.y_axis
-            conc = run.concentration
-            ax.plot(x, y, label = conc + " mg/dL")
-        ax.legend()
-        ax.legend(loc = "lower right")
-        ax.legend(fontsize = "xx-small")
-        return fig, ax
-
-class LinearityAnalysis(Analysis):
-    ''' plots linearity between current / count and conc. '''
-    def __init__(self, data):
-        self.data = data
-        self.currents = []
-        self.concentrations = []
-        self.find_measurement()
-
-    def find_measurement(self):
-        ''' groups concentrations and averages them, to get final averaged conc. and current / count point '''
-        # Group runs by concentration
-        concentration_groups = {}
-        for run in self.data.nested_data:
-            if run.concentration in concentration_groups:
-                concentration_groups[run.concentration].append(run)
-            else:
-                concentration_groups[run.concentration] = [run]
-
-        self.currents = []
-        self.concentrations = []
-
-        time_point = 10
-        for conc, runs in concentration_groups.items():
-            avg_currents = []
-            for run in runs:
-                closest_index = numpy.abs(numpy.array(run.x_axis) - time_point).argmin()
-                avg_currents.append(run.y_axis[closest_index])
-            avg_current = numpy.mean(avg_currents)
-            self.currents.append(avg_current)
-            self.concentrations.append(conc)
-
-    def run_analysis(self):
-        fig, ax = plt.subplots()
-        ax.set_xlabel("Concentration (mg/dL)")
-
-        if self.data.analysis_type == "LactateVSPCalibration":
-            ax.set_ylabel("Current (nA)")
-        elif self.data.analysis_type == "LactateStoneCalibration":
-            ax.set_ylabel("Counts")
-
-        x = numpy.array([float(i) for i in self.concentrations])
-        y = numpy.array(self.currents, dtype=float)
-        ax.scatter(x, y)
-
-        # Calculate the linear regression
-        slope, intercept, r_value, _, _ = linregress(x, y)
-        line = slope*x + intercept
-
-        # Plot the linear regression line
-        ax.plot(x, line, 'r', label=f'y={slope:.2f}x+{intercept:.2f}')
-
-        # if slope != 0:  # To avoid division by zero
-        #     ax.plot(x, line, 'g--', label=f'x={(1/slope):.2f}y{-intercept/slope:.2f}')
-        # else:
-        #     print("Slope is zero, cannot solve for x.")
-
-        new_slope = 1 / slope
-        new_int = -intercept / slope
-        
-
-        # Calculate and display R^2 value
-        r_squared = r_value**2
-        ax.text(0.05, 0.75, f'R^2 = {r_squared:.2f}', transform=ax.transAxes)
-
-        ax.legend()
-        return fig, ax, new_slope, new_int, r_squared
-
-class AnalysisCore():
-    
-    ''' handles the core functionality tying together the analyses and data handling'''
-    def __init__(self, directory: str, analysis_type: str, axis_order_in_file: tuple[str, str] = ('current', 'time')): #this all needs to grab right from UI choices
-        self.data = Data(directory, analysis_type, axis_order_in_file)
-        self.sp = SubplotAnalysis(self.data)
-        self.la = LinearityAnalysis(self.data)
-
-    def run(self):
-        ''' runs the app '''
-        fig1, ax1 = self.sp.run_analysis()
-        fig2, ax2, slope, new_int, r_squared = self.la.run_analysis()
-        return fig1, ax1, fig2, ax2, slope, new_int, r_squared

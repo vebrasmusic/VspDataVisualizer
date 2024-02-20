@@ -1,5 +1,5 @@
 ''' handles the core functionality tying together the menu and the analysis '''
-from src.menu import MainMenu
+from src.menu.menu import MainMenu
 
 class Core():
     ''' ties together the menu and analyses '''

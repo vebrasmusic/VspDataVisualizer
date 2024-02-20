@@ -1,111 +1,25 @@
 ''' handles the ui for the app '''
-from PyQt6.QtCore import QSize, pyqtSignal
+from PyQt6.QtCore import QSize 
 from PyQt6.QtWidgets import (
-    QApplication,
     QMainWindow,
-    QPushButton,
     QVBoxLayout,
     QWidget,
-    QFileDialog,
-    QComboBox,
-    QLabel,
     QHBoxLayout,
-    QLCDNumber
 )
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-from src.analysis import AnalysisCore
-
-class AnalysisTypeDropdown(QComboBox):
-    ''' dropdown for selecting the axis order in the file '''
-    def __init__(self):
-        super().__init__()
-        self.selected_analysis_type = "LactateVSPCalibration" #this is the type that determines analysis in Core
-        self.addItem("LactateVSPCalibration")
-        self.addItem("LactateStoneCalibration")
-        self.activated.connect(self.on_change)
-
-    def on_change(self):
-        ''' called when the dropdown is changed '''
-        if self.currentIndex() == 0:
-            self.selected_analysis_type = "LactateVSPCalibration"
-        elif self.currentIndex() == 1:
-            self.selected_analysis_type = "LactateStoneCalibration"
-
-class AnalysisTypeLabel(QLabel):
-    ''' label for the axis select dropdown '''
-    def __init__(self):
-        super().__init__()
-        self.setText("Analysis type:")
-
-class StartAnalysisButton(QPushButton):
-    ''' button for starting the analysis '''
-
-    start_signal = pyqtSignal()
-
-    def __init__(self):
-        super().__init__()
-        self.setText("Start Analysis")
-        self.clicked.connect(self.emit_start_signal)
-
-    def emit_start_signal(self):
-        ''' emits the start signal '''
-        self.start_signal.emit()
-
-class AxisSelectDropdown(QComboBox):
-    ''' dropdown for selecting the axis order in the file '''
-    def __init__(self):
-        super().__init__()
-        self.axis_order = ('current', 'time') #this tuple gets passed ALLLL the way to the analysis
-        self.addItem("Current | Time")
-        self.addItem("Time | Current")
-        self.activated.connect(self.on_change)
-
-    def on_change(self):
-        ''' called when the dropdown is changed '''
-        if self.currentIndex() == 0:
-            self.axis_order = ('current', 'time') 
-        elif self.currentIndex() == 1:
-            self.axis_order = ('time', 'current')
-
-class AxisSelectLabel(QLabel):
-    ''' label for the axis select dropdown '''
-    def __init__(self):
-        super().__init__()
-        self.setText("Select the axis order in the file")
-
-class SelectedFileText(QLabel):
-    ''' label for the axis select dropdown '''
-    def __init__(self):
-        super().__init__()
-
-class FileUploadButton(QPushButton):
-    ''' button for uploading the data folder '''
-
-    def __init__(self):
-        super().__init__()
-        self.selected_folder = None
-        self.setText("Select Data Folder")
-        self.clicked.connect(self.select_folder) #set where the signal goes form the button press
-    
-    def select_folder(self):
-        ''' opens a dialog to select the data folder '''
-        dlg = QFileDialog(self)
-        dlg.setFileMode(QFileDialog.FileMode.Directory)
-        if dlg.exec():
-            filenames = dlg.selectedFiles()
-            # Call StartAnalysis with the first selected directory
-            self.selected_folder = filenames[0] # stores filename into the object
-
-class LCD(QLCDNumber):
-    ''' lcd for displaying the metrics '''
-    def __init__(self):
-        super().__init__()
-        self.setSegmentStyle(QLCDNumber.SegmentStyle.Filled)
-        self.setDigitCount(5)
-
-    
+from src.analysis.analysis import AnalysisCore
+from src.menu.ui import (
+    FileUploadButton,
+    AxisSelectDropdown,
+    AxisSelectLabel,
+    AnalysisTypeDropdown,
+    AnalysisTypeLabel,
+    LCD, 
+    SelectedFileText,
+    StartAnalysisButton
+)
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
@@ -190,9 +104,9 @@ class MainWindow(QMainWindow):
         axis_order_in_file = self.axis_select_dropdown.axis_order
 
         analysis_core = AnalysisCore(directory, analysis_type, axis_order_in_file)
-        fig1, ax1, fig2, ax2, slope, y_intercept, r_squared = analysis_core.run()
+        fig1, ax1, fig2, ax2, measured_line, qa_checks = analysis_core.run()
         self.update_graphs(fig1, fig2)
-        self.update_lcd_metrics(slope, y_intercept, r_squared)
+        self.update_lcd_metrics(measured_line.slope, measured_line.y_intercept, measured_line.r_squared)
 
     def update_lcd_metrics(self, slope, y_intercept, r_squared):
         ''' updates the metrics '''
@@ -252,14 +166,3 @@ class MainWindow(QMainWindow):
         self.graph_layout.addWidget(self.canvas1)
         self.canvas2 = FigureCanvas(self.figure2)
         self.graph_layout.addWidget(self.canvas2)
-    
-
-class MainMenu():
-    ''' main menu for the app '''
-    def __init__(self):
-        self.app = QApplication([]) #creates the application, need one of these per app
-        self.window = MainWindow()
-
-    def run(self):
-        ''' runs the application '''
-        self.app.exec() #runs the application's event loop
