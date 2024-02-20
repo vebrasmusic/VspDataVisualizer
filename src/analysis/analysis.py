@@ -148,11 +148,15 @@ class QAAnalysis(Analysis):
         self.slope_rpd_percent = 5 # TODO later, we load these from a config.json
         self.y_int_rpd_percent = 5 
 
-    def run_analysis(self) -> tuple[bool, bool, bool]:
+    def run_analysis(self) -> dict[str, bool]:
         slope_check = self.check_slope_rpd(self.master_line.slope, self.measured_line.slope)
         int_check = self.check_y_intercept_rpd(self.master_line.y_intercept, self.measured_line.y_intercept)
         r_squared_check = self.check_r_squared(self.master_line.r_squared, self.measured_line.r_squared)
-        return slope_check, int_check, r_squared_check
+        return {
+            "slope": slope_check,
+            "y_intercept": int_check,
+            "r_squared": r_squared_check
+        }
 
     def get_rpd(self, true_value: float, measured_value: float) -> float:
         ''' calculates the RPD (relative measure of difference) for any 2 numbers '''

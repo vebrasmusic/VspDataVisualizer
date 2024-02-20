@@ -1,11 +1,12 @@
-''' handles the ui for the app '''
+''' defines all ui elements for the menu '''
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QPushButton,
     QFileDialog,
     QComboBox,
     QLabel,
-    QLCDNumber
+    QLCDNumber,
+    QMessageBox
 )
 
 class AnalysisTypeDropdown(QComboBox):
@@ -96,3 +97,11 @@ class LCD(QLCDNumber):
         self.setSegmentStyle(QLCDNumber.SegmentStyle.Filled)
         self.setDigitCount(8)
 
+class Alert(QMessageBox):
+    ''' alert for displaying errors '''
+    def __init__(self, parameter: str, value: float):
+        super().__init__()
+        self.setText("QA Not Passed")
+        self.setInformativeText(f"The parameter {parameter} with value {value} is outside the acceptable QA bounds. I recommend not shipping this batch.")
+        self.setStandardButtons(QMessageBox.StandardButton.Ok)
+        self.setIcon(QMessageBox.Icon.Critical)

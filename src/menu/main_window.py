@@ -1,4 +1,4 @@
-''' handles the ui for the app '''
+''' layout handler for the app, handles all layout '''
 from PyQt6.QtCore import QSize 
 from PyQt6.QtWidgets import (
     QMainWindow,
@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
-from src.analysis.analysis import AnalysisCore
+from src.analysis.analysis import AnalysisCore, Line
 from src.menu.ui import (
     FileUploadButton,
     AxisSelectDropdown,
@@ -18,12 +18,13 @@ from src.menu.ui import (
     AnalysisTypeLabel,
     LCD, 
     SelectedFileText,
-    StartAnalysisButton
+    StartAnalysisButton,
+    Alert
 )
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
-    ''' main window for the app '''
+    ''' layout handler for the app, handles all layout '''
     def __init__(self):
         super().__init__()
         self.upload_button = FileUploadButton()
@@ -107,6 +108,14 @@ class MainWindow(QMainWindow):
         fig1, ax1, fig2, ax2, measured_line, qa_checks = analysis_core.run()
         self.update_graphs(fig1, fig2)
         self.update_lcd_metrics(measured_line.slope, measured_line.y_intercept, measured_line.r_squared)
+        self.check_for_qa_issue(qa_checks, measured_line)
+
+    def check_for_qa_issue(self, qa_checks: dict[ str, bool], measured_line: Line):
+        ''' checks if the qa_checks dict is truthy, if not then alerts with what didn't pass'''
+        for check, passed in qa_checks.items():
+            if not passed:
+                alert = Alert(check, getattr(measured_line, check, "N/A"))
+                alert.exec()
 
     def update_lcd_metrics(self, slope, y_intercept, r_squared):
         ''' updates the metrics '''
@@ -130,7 +139,6 @@ class MainWindow(QMainWindow):
             self.axis_select_dropdown.setDisabled(False)
         else:
             self.axis_select_dropdown.setDisabled(True)
-
 
     def add_graph_layout(self):
         ''' Adds a layout for displaying graphs '''
