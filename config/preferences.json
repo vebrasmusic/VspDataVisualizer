@@ -1,1 +1,1 @@
-{"calibration_parameters": {"slope": "0.069931", "y_intercept": "-85.5229", "r_squared": "0.95"}}
+{"calibration_parameters": {"slope": "0.069931", "y_intercept": "-85.5229", "r_squared": "0.95"}, "qa_parameters": {"slope_rpd": "5", "y_intercept_rpd": "5"}}

@@ -147,8 +147,9 @@ class QAAnalysis(Analysis):
         self.measured_line = measured_line
         self.master_line = Line()
         self.master_line.get_values_from_preferences()
-        self.slope_rpd_percent = 5 # TODO later, we load these from a config.json
-        self.y_int_rpd_percent = 5 
+        prefs = Preferences()
+        self.slope_rpd_percent = float(prefs.get_preference("qa_parameters", "slope_rpd"))
+        self.y_int_rpd_percent = float(prefs.get_preference("qa_parameters", "y_intercept_rpd"))
 
     def run_analysis(self) -> dict[str, bool]:
         slope_check = self.check_slope_rpd(self.master_line.slope, self.measured_line.slope)

@@ -1,6 +1,5 @@
 ''' layout handler for the app, handles all layout '''
 from PyQt6.QtCore import QSize
-from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QMainWindow,
     QVBoxLayout,
@@ -22,9 +21,9 @@ from src.menu.ui import (
     SelectedFileText,
     StartAnalysisButton,
     Alert,
-    PreferencesDialog,
     SaveDialog
 )
+from src.menu.preferences_dialog import PreferencesDialog
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow):
