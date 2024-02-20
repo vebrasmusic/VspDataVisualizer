@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import linregress
 
 from src.analysis.data import Data
+from src.menu.preferences import Preferences
 
 '''
 Hows this work?
@@ -30,11 +31,12 @@ class Line():
         self.y_intercept = None
         self.r_squared = None
 
-    def get_values_from_json(self):
-        ''' use this one for a master line, where we will grab from JSON'''
-        with open('config/master_calibration_parameters.json', 'r', encoding="utf-8") as file:
-            params = json.load(file)
-        self.slope, self.y_intercept, self.r_squared = params["calibration_parameters"]["slope"], params["calibration_parameters"]["y_intercept"], params["calibration_parameters"]["r_squared"]
+    def get_values_from_preferences(self):
+        ''' gets the values from the preferences class '''
+        prefs = Preferences() #make sure to make this into floats
+        self.slope = float(prefs.get_preference("calibration_parameters", "slope"))
+        self.y_intercept = float(prefs.get_preference("calibration_parameters", "y_intercept"))
+        self.r_squared = float(prefs.get_preference("calibration_parameters", "r_squared"))
         
     def set_values(self, slope: float, y_int: float, r_squared: float):
         ''' use this one if its not the master line, ie the measured line so it can be passed in'''
@@ -144,7 +146,7 @@ class QAAnalysis(Analysis):
     def __init__(self, measured_line: Line):
         self.measured_line = measured_line
         self.master_line = Line()
-        self.master_line.get_values_from_json()
+        self.master_line.get_values_from_preferences()
         self.slope_rpd_percent = 5 # TODO later, we load these from a config.json
         self.y_int_rpd_percent = 5 
 
@@ -168,7 +170,6 @@ class QAAnalysis(Analysis):
         rpd = self.get_rpd(master_slope, measured_slope)
         if rpd <= self.slope_rpd_percent:
             return True
-        print(f"slope failed: {rpd}")
         return False
     
     def check_y_intercept_rpd(self, master_int, measured_int):
@@ -176,13 +177,11 @@ class QAAnalysis(Analysis):
         rpd = self.get_rpd(master_int, measured_int)
         if rpd <= self.y_int_rpd_percent:
             return True
-        print(f"int failed: {rpd}")
         return False
         
     def check_r_squared(self, master_r_squared, measured_r_squared):
         '''checks if r^2 is above a certain amount'''
         if measured_r_squared < master_r_squared:
-            print(f"r failed: {measured_r_squared}")
             return False
         return True
 

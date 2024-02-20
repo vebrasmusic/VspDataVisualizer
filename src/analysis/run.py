@@ -124,7 +124,6 @@ class LactateStoneCalibrationDataModifier(DataModifier):
             if stage == 2:
                 measurement_stage_index = i
                 break
-            print("no stage 3 found, error")
         adjusted_time_array = time_array[measurement_stage_index:]
         adjusted_count_array = count_array[measurement_stage_index:]
         return adjusted_time_array, adjusted_count_array
@@ -151,7 +150,6 @@ class Run():
 
     def load_data(self):
         ''' load a single text file into a numpy array '''
-        print(self.file_path)
         return self.text_loader.load_data(self.file_path)
 
     def modify_data(self, output_tuple):

@@ -1,11 +1,13 @@
 ''' layout handler for the app, handles all layout '''
-from PyQt6.QtCore import QSize 
+from PyQt6.QtCore import QSize
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
     QMainWindow,
     QVBoxLayout,
     QWidget,
     QHBoxLayout,
 )
+
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 
@@ -19,7 +21,9 @@ from src.menu.ui import (
     LCD, 
     SelectedFileText,
     StartAnalysisButton,
-    Alert
+    Alert,
+    PreferencesDialog,
+    SaveDialog
 )
 
 # Subclass QMainWindow to customize your application's main window
@@ -34,15 +38,20 @@ class MainWindow(QMainWindow):
         self.analysis_type_dropdown = AnalysisTypeDropdown()
         self.start_analysis_button = StartAnalysisButton()
         self.selected_folder_text = SelectedFileText()
+        self.preferences_dialog = PreferencesDialog()
+        self.save_dialog = SaveDialog()
         self.slope_lcd = LCD()
         self.int_lcd = LCD()
         self.r_squared_lcd = LCD()
         self.create_ui_layout() # this actually makes all the UI
         self.add_graph_layout()  # Call a new method to add the graph layout
+        self.create_menu_bar() #creates the menu bar
 
     def create_ui_layout(self):
         ''' creates the ui layout '''
         self.show()
+        #self.setWindowIcon(QIcon("assets/icon.png")) TODO
+
         self.analysis_type_dropdown.activated.connect(self.update_layout_axis_selection)
         self.upload_button.clicked.connect(self.update_layout_file_selection)
         self.start_analysis_button.start_signal.connect(self.start_analysis)
@@ -174,3 +183,27 @@ class MainWindow(QMainWindow):
         self.graph_layout.addWidget(self.canvas1)
         self.canvas2 = FigureCanvas(self.figure2)
         self.graph_layout.addWidget(self.canvas2)
+
+    def create_menu_bar(self):
+        ''' Creates the menu bar for the application '''
+        menu_bar = self.menuBar()  # Get the menu bar from the main window
+
+        # Create a 'File' menu
+        file_menu = menu_bar.addMenu('File')
+
+        # Add 'Save' action
+        save_action = file_menu.addAction('Save')
+        save_action.triggered.connect(self.save_file)  # Connect to a method to handle saving
+
+        # Add 'Preferences' action
+        preferences_action = file_menu.addAction('Preferences')
+        preferences_action.triggered.connect(self.open_preferences)  # Connect to a method to open preferences
+
+    def save_file(self):
+        ''' Handle file saving '''
+        self.save_dialog.exec()
+
+
+    def open_preferences(self):
+        ''' Open the preferences dialog '''
+        self.preferences_dialog.exec()
