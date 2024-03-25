@@ -33,8 +33,12 @@ btw for windows, you may get a script execution error (some warning), in which c
 Set-ExecutionPolicy Unrestricted -Scope Process
 ```
 
-After you've done either for your operating system, and it's installed the dependencies, you can run the program:
+Then, you can use either the automated run by double clicking "run.bat" (ONYL ON WINDOWS)
+
+or manually:
 
 ``` bash
 python main.py
 ```
+
+
